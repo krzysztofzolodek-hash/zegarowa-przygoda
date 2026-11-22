@@ -1,0 +1,20 @@
+{
+  "name": "zegarowa-przygoda",
+  "version": "0.1.0",
+  "description": "Zegarowa Przygoda – nauka zegara wskazówkowego",
+  "main": "index.js",
+  "scripts": {
+    "build": "echo 'Brak dodatkowego builda – pliki są już w www/'",
+    "cap:sync": "npx cap sync",
+    "cap:open": "npx cap open android",
+    "cap:run": "npx cap run android"
+  },
+  "keywords": ["edukacja", "dzieci", "zegar", "pwa"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@capacitor/android": "^6.1.2",
+    "@capacitor/core": "^6.1.2",
+    "@capacitor/cli": "^6.1.2"
+  }
+}

@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="description" content="Zegarowa Przygoda – nauka odczytywania godziny na zegarze wskazówkowym poprzez zabawę">
+  <meta name="theme-color" content="#74b9ff">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Zegarowa Przygoda">
+  <meta name="mobile-web-app-capable" content="yes">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="../icons/icon-180.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="../icons/icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="../icons/icon-512.png">
+  <title>Zegarowa Przygoda</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: linear-gradient(135deg, #a8e6cf, #dcedc1);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 10px;
+      color: #333;
+      touch-action: none;
+      overflow-x: hidden;
+    }
+
+    /* Ekrany pełnoekranowe */
+    .screen {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      padding: 20px;
+      text-align: center;
+    }
+    #start-screen {
+      background: linear-gradient(135deg, #74b9ff, #a29bfe);
+      color: white;
+    }
+    #tutorial-screen {
+      background: rgba(0,0,0,0.85);
+      color: white;
+      z-index: 110;
+    }
+    #summary-screen {
+      background: linear-gradient(135deg, #00b894, #55efc4);
+      color: white;
+      display: none;
+    }
+
+    .screen h1 { font-size: 2.2rem; margin-bottom: 10px; text-shadow: 0 3px 8px rgba(0,0,0,0.2); }
+    .screen p { font-size: 1.15rem; margin-bottom: 24px; opacity: 0.95; max-width: 320px; }
+    .screen button {
+      padding: 14px 40px;
+      font-size: 1.2rem;
+      border: none;
+      border-radius: 50px;
+      background: #ffeaa7;
+      color: #2d3436;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 5px 0 #fdcb6e;
+      margin: 6px;
+    }
+    .screen button:active { transform: translateY(3px); box-shadow: 0 2px 0 #fdcb6e; }
+
+    .tutorial-step { display: none; }
+    .tutorial-step.active { display: block; }
+    .tutorial-dots { display: flex; gap: 8px; margin: 20px 0; }
+    .tutorial-dots span {
+      width: 10px; height: 10px; border-radius: 50%;
+      background: rgba(255,255,255,0.4);
+    }
+    .tutorial-dots span.active { background: white; }
+
+    h1.game-title { font-size: 1.35rem; margin-bottom: 6px; color: #2d3436; }
+
+    .controls, .difficulty, .bottom-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      justify-content: center;
+      margin-bottom: 8px;
+      max-width: 400px;
+    }
+    button {
+      padding: 9px 14px;
+      font-size: 0.95rem;
+      border: none;
+      border-radius: 12px;
+      background: #4a90e2;
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 3px 0 #357abd;
+      transition: transform 0.1s;
+    }
+    button:active { transform: translateY(2px); box-shadow: none; }
+    button.active { background: #2ecc71; box-shadow: 0 3px 0 #27ae60; }
+    button.secondary { background: #e67e22; box-shadow: 0 3px 0 #d35400; }
+    button.danger { background: #e74c3c; box-shadow: 0 3px 0 #c0392b; }
+    button.practice { background: #9b59b6; box-shadow: 0 3px 0 #8e44ad; }
+    .difficulty button {
+      padding: 7px 11px;
+      font-size: 0.85rem;
+      background: #95a5a6;
+      box-shadow: 0 2px 0 #7f8c8d;
+    }
+    .difficulty button.active {
+      background: #9b59b6;
+      box-shadow: 0 2px 0 #8e44ad;
+    }
+
+    .score-box {
+      background: white;
+      border-radius: 20px;
+      padding: 7px 18px;
+      margin-bottom: 8px;
+      font-size: 1.05rem;
+      font-weight: 600;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      display: flex;
+      gap: 16px;
+    }
+
+    .info {
+      background: white;
+      border-radius: 16px;
+      padding: 11px 16px;
+      margin-bottom: 10px;
+      text-align: center;
+      font-size: 1.2rem;
+      font-weight: 600;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      min-height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #clock-container {
+      position: relative;
+      width: min(86vw, 320px);
+      height: min(86vw, 320px);
+      margin: 4px 0;
+    }
+    canvas#clock {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: white;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+      touch-action: none;
+    }
+
+    .options {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 9px;
+      width: min(86vw, 320px);
+      margin-top: 10px;
+    }
+    .options button { padding: 13px; font-size: 1.1rem; }
+
+    .feedback {
+      margin-top: 10px;
+      font-size: 1.35rem;
+      font-weight: 700;
+      min-height: 34px;
+      text-align: center;
+    }
+    .correct { color: #27ae60; }
+    .wrong { color: #e74c3c; }
+
+    #confetti {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      pointer-events: none;
+      z-index: 50;
+    }
+
+    .tip {
+      background: #fff3cd;
+      color: #856404;
+      padding: 9px 14px;
+      border-radius: 12px;
+      font-size: 0.9rem;
+      margin-top: 8px;
+      max-width: 320px;
+      text-align: center;
+    }
+
+    .version {
+      position: fixed;
+      bottom: 6px;
+      right: 10px;
+      font-size: 0.7rem;
+      color: rgba(0,0,0,0.35);
+      z-index: 5;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Ekran startowy -->
+  <div id="start-screen" class="screen">
+    <h1>Zegarowa Przygoda</h1>
+    <p>Nauka zegara w wielkiej przygodzie!</p>
+    <button id="btn-start">Start przygody</button>
+  </div>
+
+  <!-- Tutorial -->
+  <div id="tutorial-screen" class="screen" style="display:none;">
+    <div class="tutorial-step active" data-step="0">
+      <h2>Witaj w przygodzie!</h2>
+      <p>Nauczysz się odczytywać godzinę na zegarze wskazówkowym poprzez zabawę.</p>
+    </div>
+    <div class="tutorial-step" data-step="1">
+      <h2>Tryb „Ustaw wskazówki”</h2>
+      <p>Widzisz godzinę zapisaną cyframi. Przeciągnij wskazówki palcem, żeby ustawić tę samą godzinę na zegarze.</p>
+    </div>
+    <div class="tutorial-step" data-step="2">
+      <h2>Tryb „Odczytaj godzinę”</h2>
+      <p>Zegar pokazuje godzinę. Wybierz poprawną odpowiedź spośród czterech możliwości.</p>
+    </div>
+    <div class="tutorial-step" data-step="3">
+      <h2>Tryb „Ćwicz swobodnie”</h2>
+      <p>Możesz dowolnie przesuwać wskazówki i ćwiczyć bez sprawdzania. Idealne na początek!</p>
+    </div>
+    <div class="tutorial-dots">
+      <span class="active"></span><span></span><span></span><span></span>
+    </div>
+    <button id="btn-tutorial-next">Dalej</button>
+    <button id="btn-tutorial-skip" style="background:#dfe6e9; color:#2d3436; box-shadow:none; font-size:0.95rem;">Pomiń</button>
+  </div>
+
+  <!-- Ekran podsumowania -->
+  <div id="summary-screen" class="screen">
+    <h1>Świetna seria!</h1>
+    <p id="summary-text">Udało Ci się 5 razy z rzędu!</p>
+    <p style="font-size:1.4rem; margin:10px 0;">Punkty: <strong id="summary-score">0</strong></p>
+    <button id="btn-summary-continue">Kontynuuj przygodę</button>
+  </div>
+
+  <!-- Główna gra -->
+  <h1 class="game-title">Zegarowa Przygoda</h1>
+
+  <div class="difficulty">
+    <button data-diff="1" class="active">Pełne godziny</button>
+    <button data-diff="2">Połówki</button>
+    <button data-diff="3">Kwadranse</button>
+    <button data-diff="4">Co 5 min</button>
+  </div>
+
+  <div class="controls">
+    <button id="btn-set" class="active">Ustaw wskazówki</button>
+    <button id="btn-read">Odczytaj godzinę</button>
+    <button id="btn-practice" class="practice">Ćwicz swobodnie</button>
+  </div>
+
+  <div class="score-box">
+    <span>Punkty: <span id="score">0</span></span>
+    <span>Seria: <span id="streak">0</span></span>
+  </div>
+
+  <div class="info" id="info">Ustaw wskazówki na: <strong>3:00</strong></div>
+
+  <div id="clock-container">
+    <canvas id="clock" width="400" height="400"></canvas>
+  </div>
+
+  <div class="options" id="options" style="display:none;"></div>
+  <button id="btn-check" style="margin-top:10px; display:none;">Sprawdź</button>
+
+  <div class="feedback" id="feedback"></div>
+  <div class="tip" id="tip">Przeciągnij wskazówki palcem, a potem naciśnij „Sprawdź”</div>
+
+  <div class="bottom-controls" style="margin-top:12px;">
+    <button id="btn-new" class="secondary">Nowa godzina</button>
+    <button id="btn-reset" class="danger">Reset punktów</button>
+  </div>
+
+  <div class="version">v0.1.0</div>
+
+  <canvas id="confetti"></canvas>
+
+  <script>
+    // ========== DŹWIĘKI ==========
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+    function playTone(freq, duration, type = 'sine', volume = 0.15) {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.frequency.value = freq;
+      osc.type = type;
+      gain.gain.setValueAtTime(volume, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+      osc.start();
+      osc.stop(audioCtx.currentTime + duration);
+    }
+
+    function playSuccess() {
+      playTone(523.25, 0.1);
+      setTimeout(() => playTone(659.25, 0.1), 100);
+      setTimeout(() => playTone(783.99, 0.18), 200);
+    }
+    function playError() { playTone(180, 0.28, 'sawtooth', 0.12); }
+    function playClick() { playTone(600, 0.06, 'square', 0.08); }
+    function playStart() {
+      playTone(392, 0.12);
+      setTimeout(() => playTone(523.25, 0.12), 130);
+      setTimeout(() => playTone(659.25, 0.2), 260);
+    }
+    function playSummary() {
+      playTone(523, 0.12);
+      setTimeout(() => playTone(659, 0.12), 120);
+      setTimeout(() => playTone(784, 0.12), 240);
+      setTimeout(() => playTone(1047, 0.25), 360);
+    }
+
+    // ========== CONFETTI ==========
+    const confettiCanvas = document.getElementById('confetti');
+    const confettiCtx = confettiCanvas.getContext('2d');
+    let confettiParticles = [];
+
+    function resizeConfetti() {
+      confettiCanvas.width = window.innerWidth;
+      confettiCanvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeConfetti);
+    resizeConfetti();
+
+    function createConfetti() {
+      confettiParticles = [];
+      const colors = ['#e74c3c','#3498db','#2ecc71','#f1c40f','#9b59b6','#e67e22'];
+      for (let i = 0; i < 130; i++) {
+        confettiParticles.push({
+          x: Math.random() * confettiCanvas.width,
+          y: -30 - Math.random() * 80,
+          size: 5 + Math.random() * 9,
+          color: colors[Math.floor(Math.random() * colors.length)],
+          speedY: 2.2 + Math.random() * 4,
+          speedX: -2.5 + Math.random() * 5,
+          rotation: Math.random() * 360,
+          rotSpeed: -6 + Math.random() * 12
+        });
+      }
+      requestAnimationFrame(updateConfetti);
+    }
+
+    function updateConfetti() {
+      confettiCtx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+      confettiParticles.forEach(p => {
+        p.y += p.speedY;
+        p.x += p.speedX;
+        p.rotation += p.rotSpeed;
+        confettiCtx.save();
+        confettiCtx.translate(p.x, p.y);
+        confettiCtx.rotate(p.rotation * Math.PI / 180);
+        confettiCtx.fillStyle = p.color;
+        confettiCtx.fillRect(-p.size/2, -p.size/2, p.size, p.size);
+        confettiCtx.restore();
+      });
+      confettiParticles = confettiParticles.filter(p => p.y < confettiCanvas.height + 30);
+      if (confettiParticles.length > 0) requestAnimationFrame(updateConfetti);
+    }
+
+    // ========== ZEGAR + ANIMACJA ==========
+    const canvas = document.getElementById('clock');
+    const ctx = canvas.getContext('2d');
+    const size = 400;
+    const center = size / 2;
+    const radius = 170;
+
+    let mode = 'set'; // set | read | practice
+    let difficulty = 1;
+    let targetHour = 3, targetMinute = 0;
+    let currentHour = 3, currentMinute = 0;
+    let displayHour = 3, displayMinute = 0;
+    let score = parseInt(localStorage.getItem('zegarowa_punkty') || '0');
+    let streak = 0;
+    let dragging = null;
+    let isCorrect = false;
+    let animating = false;
+
+    document.getElementById('score').textContent = score;
+    document.getElementById('streak').textContent = streak;
+
+    function drawClock() {
+      ctx.clearRect(0, 0, size, size);
+
+      ctx.beginPath();
+      ctx.arc(center, center, radius, 0, Math.PI * 2);
+      ctx.fillStyle = '#fffef5';
+      ctx.fill();
+      ctx.strokeStyle = '#2c3e50';
+      ctx.lineWidth = 10;
+      ctx.stroke();
+
+      for (let i = 0; i < 60; i++) {
+        const angle = (i * 6 - 90) * Math.PI / 180;
+        const isHour = i % 5 === 0;
+        const len = isHour ? 18 : 8;
+        const inner = radius - (isHour ? 28 : 16);
+        ctx.beginPath();
+        ctx.moveTo(center + Math.cos(angle) * inner, center + Math.sin(angle) * inner);
+        ctx.lineTo(center + Math.cos(angle) * (inner + len), center + Math.sin(angle) * (inner + len));
+        ctx.strokeStyle = isHour ? '#2c3e50' : '#bdc3c7';
+        ctx.lineWidth = isHour ? 4 : 2;
+        ctx.stroke();
+      }
+
+      ctx.font = 'bold 28px system-ui';
+      ctx.fillStyle = '#2c3e50';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      for (let i = 1; i <= 12; i++) {
+        const angle = (i * 30 - 90) * Math.PI / 180;
+        ctx.fillText(i, center + Math.cos(angle) * (radius - 48), center + Math.sin(angle) * (radius - 48));
+      }
+
+      ctx.beginPath();
+      ctx.arc(center, center, 10, 0, Math.PI * 2);
+      ctx.fillStyle = '#e74c3c';
+      ctx.fill();
+
+      const hourAngle = ((displayHour % 12) + displayMinute / 60) * 30 - 90;
+      drawHand(hourAngle, radius * 0.52, 14, '#2c3e50');
+
+      const minuteAngle = displayMinute * 6 - 90;
+      drawHand(minuteAngle, radius * 0.78, 8, '#e74c3c');
+
+      const minRad = minuteAngle * Math.PI / 180;
+      ctx.beginPath();
+      ctx.arc(center + Math.cos(minRad) * radius * 0.78, center + Math.sin(minRad) * radius * 0.78, 8, 0, Math.PI * 2);
+      ctx.fillStyle = '#e74c3c';
+      ctx.fill();
+    }
+
+    function drawHand(angleDeg, length, width, color) {
+      const angle = angleDeg * Math.PI / 180;
+      ctx.beginPath();
+      ctx.moveTo(center, center);
+      ctx.lineTo(center + Math.cos(angle) * length, center + Math.sin(angle) * length);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = width;
+      ctx.lineCap = 'round';
+      ctx.stroke();
+    }
+
+    // Animacja wskazówek
+    function animateTo(targetH, targetM, duration = 600) {
+      if (animating) return;
+      animating = true;
+      const startH = displayHour;
+      const startM = displayMinute;
+      const startTime = performance.now();
+
+      function step(now) {
+        const t = Math.min((now - startTime) / duration, 1);
+        const ease = 1 - Math.pow(1 - t, 3);
+
+        let diffM = targetM - startM;
+        let diffH = targetH - startH;
+        if (diffH > 6) diffH -= 12;
+        if (diffH < -6) diffH += 12;
+
+        displayMinute = startM + diffM * ease;
+        displayHour = startH + diffH * ease;
+        if (displayMinute < 0) displayMinute += 60;
+        if (displayMinute >= 60) displayMinute -= 60;
+
+        drawClock();
+        if (t < 1) {
+          requestAnimationFrame(step);
+        } else {
+          displayHour = targetH;
+          displayMinute = targetM;
+          currentHour = targetH;
+          currentMinute = targetM;
+          animating = false;
+          drawClock();
+        }
+      }
+      requestAnimationFrame(step);
+    }
+
+    // Interakcja
+    function getAngleFromEvent(e) {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = size / rect.width;
+      const scaleY = size / rect.height;
+      const clientX = e.clientX ?? e.touches?.[0]?.clientX;
+      const clientY = e.clientY ?? e.touches?.[0]?.clientY;
+      const x = (clientX - rect.left) * scaleX - center;
+      const y = (clientY - rect.top) * scaleY - center;
+      let angle = Math.atan2(y, x) * 180 / Math.PI + 90;
+      if (angle < 0) angle += 360;
+      return angle;
+    }
+
+    function startDrag(e) {
+      if ((mode !== 'set' && mode !== 'practice') || isCorrect || animating) return;
+      e.preventDefault();
+      const angle = getAngleFromEvent(e);
+      const hourAngle = ((currentHour % 12) + currentMinute / 60) * 30;
+      const minuteAngle = currentMinute * 6;
+      const distHour = Math.min(Math.abs(angle - hourAngle), 360 - Math.abs(angle - hourAngle));
+      const distMinute = Math.min(Math.abs(angle - minuteAngle), 360 - Math.abs(angle - minuteAngle));
+      dragging = distMinute < distHour ? 'minute' : 'hour';
+      moveDrag(e);
+    }
+
+    function moveDrag(e) {
+      if (!dragging) return;
+      e.preventDefault();
+      const angle = getAngleFromEvent(e);
+      if (dragging === 'minute') {
+        let m = Math.round(angle / 6) % 60;
+        if (mode === 'set') {
+          if (difficulty <= 2) m = m < 15 ? 0 : 30;
+          else if (difficulty === 3) m = Math.round(m / 15) * 15 % 60;
+          else if (difficulty === 4) m = Math.round(m / 5) * 5 % 60;
+        }
+        currentMinute = m;
+        displayMinute = m;
+      } else {
+        let h = Math.floor(angle / 30);
+        currentHour = h === 0 ? 12 : h;
+        displayHour = currentHour;
+      }
+      drawClock();
+    }
+
+    function endDrag() { dragging = null; }
+
+    canvas.addEventListener('pointerdown', startDrag);
+    canvas.addEventListener('pointermove', moveDrag);
+    canvas.addEventListener('pointerup', endDrag);
+    canvas.addEventListener('pointerleave', endDrag);
+    canvas.addEventListener('touchstart', startDrag, {passive: false});
+    canvas.addEventListener('touchmove', moveDrag, {passive: false});
+    canvas.addEventListener('touchend', endDrag);
+
+    // Logika gry
+    function randomTime() {
+      let h = Math.floor(Math.random() * 12) + 1;
+      let m = 0;
+      if (difficulty === 1) m = 0;
+      else if (difficulty === 2) m = Math.random() < 0.5 ? 0 : 30;
+      else if (difficulty === 3) m = [0, 15, 30, 45][Math.floor(Math.random() * 4)];
+      else m = Math.floor(Math.random() * 12) * 5;
+      return { h, m };
+    }
+
+    function formatTime(h, m) {
+      return `${h}:${m.toString().padStart(2, '0')}`;
+    }
+
+    function newQuestion(animate = true) {
+      isCorrect = false;
+      document.getElementById('feedback').textContent = '';
+      document.getElementById('btn-check').style.display = mode === 'set' ? 'inline-block' : 'none';
+      document.getElementById('options').style.display = mode === 'read' ? 'grid' : 'none';
+      document.getElementById('tip').style.display = (mode === 'set') ? 'block' : 'none';
+
+      if (mode === 'practice') {
+        document.getElementById('info').innerHTML = 'Ćwicz swobodnie – przesuwaj wskazówki jak chcesz';
+        document.getElementById('tip').style.display = 'none';
+        return;
+      }
+
+      const t = randomTime();
+      targetHour = t.h;
+      targetMinute = t.m;
+
+      if (mode === 'set') {
+        const start = randomTime();
+        if (animate) {
+          animateTo(start.h, start.m, 500);
+        } else {
+          currentHour = displayHour = start.h;
+          currentMinute = displayMinute = start.m;
+          drawClock();
+        }
+        document.getElementById('info').innerHTML =
+          `Ustaw wskazówki na: <strong style="color:#e74c3c">${formatTime(targetHour, targetMinute)}</strong>`;
+      } else {
+        if (animate) {
+          animateTo(targetHour, targetMinute, 700);
+        } else {
+          currentHour = displayHour = targetHour;
+          currentMinute = displayMinute = targetMinute;
+          drawClock();
+        }
+        document.getElementById('info').innerHTML = `Jaka to godzina?`;
+        generateOptions();
+      }
+    }
+
+    function generateOptions() {
+      const opts = new Set();
+      opts.add(formatTime(targetHour, targetMinute));
+      while (opts.size < 4) {
+        const t = randomTime();
+        opts.add(formatTime(t.h, t.m));
+      }
+      const arr = Array.from(opts).sort(() => Math.random() - 0.5);
+      const container = document.getElementById('options');
+      container.innerHTML = '';
+      arr.forEach(time => {
+        const btn = document.createElement('button');
+        btn.textContent = time;
+        btn.onclick = () => checkReadAnswer(time);
+        container.appendChild(btn);
+      });
+    }
+
+    function addPoint() {
+      score++;
+      streak++;
+      localStorage.setItem('zegarowa_punkty', score);
+      document.getElementById('score').textContent = score;
+      document.getElementById('streak').textContent = streak;
+
+      if (streak >= 5 && streak % 5 === 0) {
+        showSummary();
+      }
+    }
+
+    function checkSetAnswer() {
+      if (currentHour === targetHour && currentMinute === targetMinute) {
+        addPoint();
+        document.getElementById('feedback').innerHTML = '<span class="correct">✓ Świetnie!</span>';
+        playSuccess();
+        createConfetti();
+        isCorrect = true;
+        setTimeout(() => newQuestion(true), 1300);
+      } else {
+        streak = 0;
+        document.getElementById('streak').textContent = streak;
+        document.getElementById('feedback').innerHTML = '<span class="wrong">Spróbuj jeszcze raz</span>';
+        playError();
+      }
+    }
+
+    function checkReadAnswer(selected) {
+      if (selected === formatTime(targetHour, targetMinute)) {
+        addPoint();
+        document.getElementById('feedback').innerHTML = '<span class="correct">✓ Brawo!</span>';
+        playSuccess();
+        createConfetti();
+        setTimeout(() => newQuestion(true), 1300);
+      } else {
+        streak = 0;
+        document.getElementById('streak').textContent = streak;
+        document.getElementById('feedback').innerHTML = '<span class="wrong">Nie tym razem</span>';
+        playError();
+      }
+    }
+
+    function showSummary() {
+      document.getElementById('summary-text').textContent = `Udało Ci się ${streak} razy z rzędu!`;
+      document.getElementById('summary-score').textContent = score;
+      document.getElementById('summary-screen').style.display = 'flex';
+      playSummary();
+      createConfetti();
+    }
+
+    // ========== PRZYCISKI ==========
+    document.getElementById('btn-start').onclick = () => {
+      document.getElementById('start-screen').style.display = 'none';
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      playStart();
+      if (!localStorage.getItem('zegarowa_tutorial')) {
+        document.getElementById('tutorial-screen').style.display = 'flex';
+      } else {
+        newQuestion(false);
+      }
+    };
+
+    // Tutorial
+    let tutorialStep = 0;
+    document.getElementById('btn-tutorial-next').onclick = () => {
+      playClick();
+      tutorialStep++;
+      if (tutorialStep >= 4) {
+        localStorage.setItem('zegarowa_tutorial', '1');
+        document.getElementById('tutorial-screen').style.display = 'none';
+        newQuestion(false);
+        return;
+      }
+      document.querySelectorAll('.tutorial-step').forEach(el => el.classList.remove('active'));
+      document.querySelector(`.tutorial-step[data-step="${tutorialStep}"]`).classList.add('active');
+      document.querySelectorAll('.tutorial-dots span').forEach((el, i) => {
+        el.classList.toggle('active', i === tutorialStep);
+      });
+      if (tutorialStep === 3) document.getElementById('btn-tutorial-next').textContent = 'Zaczynamy!';
+    };
+    document.getElementById('btn-tutorial-skip').onclick = () => {
+      localStorage.setItem('zegarowa_tutorial', '1');
+      document.getElementById('tutorial-screen').style.display = 'none';
+      newQuestion(false);
+    };
+
+    document.getElementById('btn-summary-continue').onclick = () => {
+      document.getElementById('summary-screen').style.display = 'none';
+      playClick();
+    };
+
+    document.getElementById('btn-set').onclick = () => {
+      mode = 'set';
+      playClick();
+      document.getElementById('btn-set').classList.add('active');
+      document.getElementById('btn-read').classList.remove('active');
+      document.getElementById('btn-practice').classList.remove('active');
+      newQuestion(true);
+    };
+    document.getElementById('btn-read').onclick = () => {
+      mode = 'read';
+      playClick();
+      document.getElementById('btn-read').classList.add('active');
+      document.getElementById('btn-set').classList.remove('active');
+      document.getElementById('btn-practice').classList.remove('active');
+      newQuestion(true);
+    };
+    document.getElementById('btn-practice').onclick = () => {
+      mode = 'practice';
+      playClick();
+      document.getElementById('btn-practice').classList.add('active');
+      document.getElementById('btn-set').classList.remove('active');
+      document.getElementById('btn-read').classList.remove('active');
+      document.getElementById('btn-check').style.display = 'none';
+      document.getElementById('options').style.display = 'none';
+      document.getElementById('feedback').textContent = '';
+      newQuestion(false);
+    };
+
+    document.getElementById('btn-new').onclick = () => {
+      playClick();
+      newQuestion(true);
+    };
+    document.getElementById('btn-check').onclick = checkSetAnswer;
+
+    document.getElementById('btn-reset').onclick = () => {
+      if (confirm('Na pewno chcesz wyzerować punkty i serię?')) {
+        score = 0;
+        streak = 0;
+        localStorage.setItem('zegarowa_punkty', 0);
+        document.getElementById('score').textContent = 0;
+        document.getElementById('streak').textContent = 0;
+        playError();
+      }
+    };
+
+    document.querySelectorAll('.difficulty button').forEach(btn => {
+      btn.onclick = () => {
+        playClick();
+        document.querySelectorAll('.difficulty button').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        difficulty = parseInt(btn.dataset.diff);
+        if (mode !== 'practice') newQuestion(true);
+      };
+    });
+
+    // Start
+    drawClock();
+
+    // Rejestracja Service Workera (PWA)
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .then(reg => console.log('Service Worker zarejestrowany:', reg.scope))
+          .catch(err => console.log('Błąd SW:', err));
+      });
+    }
+  </script>
+</body>
+</html>

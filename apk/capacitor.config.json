@@ -1,0 +1,11 @@
+{
+  "appId": "pl.zegarowa.przygoda",
+  "appName": "Zegarowa Przygoda",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "allowMixedContent": true
+  }
+}
